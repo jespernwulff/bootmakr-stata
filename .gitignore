@@ -1,3 +1,6 @@
 *.tmp.*
 *.stswp
 .claude/
+CLAUDE.md
+legacy/
+bootmakr_examples_help_file.do
