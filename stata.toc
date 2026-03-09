@@ -1,0 +1,6 @@
+v 3
+d Jesper N. Wulff
+d
+d Bootstrap inference for sensemakr sensitivity analysis
+d
+p bootmakr Bootstrap inference for sensemakr sensitivity analysis
