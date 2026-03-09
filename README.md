@@ -15,21 +15,21 @@ net install bootmakr, from("https://raw.githubusercontent.com/jespernwulff/bootm
 use "https://raw.githubusercontent.com/resonance1/sensemakr-stata/master/darfur.dta", clear
 
 * Standard bootstrap with benchmark
-bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f, ///
     treat(directlyharmed) benchmark(female) reps(500) seed(12345)
 
 * Clustered bootstrap
-bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f, ///
     treat(directlyharmed) benchmark(female) reps(500) seed(12345) ///
     cluster(village_factor)
 
 * Multiple kd values with plot
-bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f, ///
     treat(directlyharmed) benchmark(female) kd(1 2 3) ///
     reps(500) seed(12345) cluster(village_factor) plot
 
 * Convergence diagnostics
-bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f, ///
     treat(directlyharmed) gbenchmark(age farmer herder pastv hhsize female) ///
     reps(1000) seed(12345) cluster(village_factor) ///
     converge(minreps(100) stepsize(100))

@@ -304,34 +304,34 @@ These examples use the Darfur data from Hazlett (2020), available at:{p_end}
 {phang2}{cmd:. use "https://raw.githubusercontent.com/resonance1/sensemakr-stata/master/darfur.dta", clear}{p_end}
 
 {pstd}Standard bootstrap with benchmark{p_end}
-{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
 {phang2}{cmd:     treat(directlyharmed) benchmark(female) reps(500) seed(12345)}{p_end}
 
 {pstd}Clustered bootstrap{p_end}
-{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
 {phang2}{cmd:     treat(directlyharmed) benchmark(female) reps(500) seed(12345)}{p_end}
 {phang2}{cmd:     cluster(village_factor)}{p_end}
 
 {pstd}Multiple kd values with plot{p_end}
-{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
 {phang2}{cmd:     treat(directlyharmed) benchmark(female) kd(1 2 3)}{p_end}
 {phang2}{cmd:     reps(500) seed(12345) cluster(village_factor) plot}{p_end}
 
 {pstd}Group benchmark{p_end}
-{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
 {phang2}{cmd:     treat(directlyharmed)}{p_end}
 {phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
 {phang2}{cmd:     reps(500) seed(12345) cluster(village_factor) kd(1 2 3) plot}{p_end}
 
 {pstd}Convergence diagnostics{p_end}
-{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
 {phang2}{cmd:     treat(directlyharmed)}{p_end}
 {phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
 {phang2}{cmd:     reps(1000) seed(12345) cluster(village_factor)}{p_end}
 {phang2}{cmd:     converge(minreps(100) stepsize(100))}{p_end}
 
 {pstd}Saving and inspecting bootstrap draws{p_end}
-{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
 {phang2}{cmd:     treat(directlyharmed)}{p_end}
 {phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
 {phang2}{cmd:     reps(500) seed(12345) cluster(village_factor)}{p_end}
