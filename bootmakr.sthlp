@@ -299,31 +299,67 @@ convergence statistics are reported. The default is 75% of {cmd:reps()}.
 {marker examples}{...}
 {title:Examples}
 
-{pstd}Setup{p_end}
-{phang2}{cmd:. sysuse auto, clear}{p_end}
-{phang2}{cmd:. generate mpg2 = mpg^2}{p_end}
+{pstd}
+These examples use the Darfur data from Hazlett (2020), available at:{p_end}
+{phang2}{cmd:. use "https://raw.githubusercontent.com/resonance1/sensemakr-stata/master/darfur.dta", clear}{p_end}
 
-{pstd}Basic bootstrap with sensemakr defaults{p_end}
-{phang2}{cmd:. bootmakr price mpg mpg2 weight, treat(foreign) reps(500) seed(12345)}{p_end}
-
-{pstd}With benchmark covariate and kd multiplier{p_end}
-{phang2}{cmd:. bootmakr price mpg mpg2 weight, treat(foreign) benchmark(weight) kd(1) reps(500) seed(12345)}{p_end}
-
-{pstd}Multiple kd values with plot{p_end}
-{phang2}{cmd:. bootmakr price mpg mpg2 weight, treat(foreign) benchmark(weight) kd(1 2 3) reps(500) seed(12345) plot}{p_end}
+{pstd}Standard bootstrap with benchmark{p_end}
+{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:     treat(directlyharmed) benchmark(female) reps(500) seed(12345)}{p_end}
 
 {pstd}Clustered bootstrap{p_end}
-{phang2}{cmd:. bootmakr price mpg mpg2 weight, treat(foreign) cluster(rep78) reps(500) seed(12345)}{p_end}
+{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:     treat(directlyharmed) benchmark(female) reps(500) seed(12345)}{p_end}
+{phang2}{cmd:     cluster(village_factor)}{p_end}
 
-{pstd}With convergence diagnostics{p_end}
-{phang2}{cmd:. bootmakr price mpg mpg2 weight, treat(foreign) benchmark(weight) kd(1) reps(2000) seed(12345) converge(minreps(200) stepsize(200))}{p_end}
+{pstd}Multiple kd values with plot{p_end}
+{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:     treat(directlyharmed) benchmark(female) kd(1 2 3)}{p_end}
+{phang2}{cmd:     reps(500) seed(12345) cluster(village_factor) plot}{p_end}
 
-{pstd}Program mode: user-supplied program{p_end}
-{phang2}{cmd:. program define my_sensemakr, eclass}{p_end}
-{phang2}{cmd:.     regress price mpg mpg2 weight foreign}{p_end}
-{phang2}{cmd:.     sensemakr price mpg mpg2 weight, treat(foreign) benchmark(weight) kd(1)}{p_end}
-{phang2}{cmd:. end}{p_end}
-{phang2}{cmd:. bootmakr, treat(foreign) program(my_sensemakr) reps(500) seed(12345)}{p_end}
+{pstd}Group benchmark{p_end}
+{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:     treat(directlyharmed)}{p_end}
+{phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
+{phang2}{cmd:     reps(500) seed(12345) cluster(village_factor) kd(1 2 3) plot}{p_end}
+
+{pstd}Convergence diagnostics{p_end}
+{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:     treat(directlyharmed)}{p_end}
+{phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
+{phang2}{cmd:     reps(1000) seed(12345) cluster(village_factor)}{p_end}
+{phang2}{cmd:     converge(minreps(100) stepsize(100))}{p_end}
+
+{pstd}Saving and inspecting bootstrap draws{p_end}
+{phang2}{cmd:. bootmakr peacefactor age farmer herder pastv hhsize female i.village_f,}{p_end}
+{phang2}{cmd:     treat(directlyharmed)}{p_end}
+{phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
+{phang2}{cmd:     reps(500) seed(12345) cluster(village_factor)}{p_end}
+{phang2}{cmd:     converge(minreps(100) stepsize(100) savedata(my_convergence_data))}{p_end}
+{phang2}{cmd:. use my_convergence_data.dta, clear}{p_end}
+
+
+{marker references}{...}
+{title:References}
+
+{phang}
+Cinelli, C. and C. Hazlett. 2020.
+Making sense of sensitivity: Extending omitted variable bias.
+{it:Journal of the Royal Statistical Society: Series B (Statistical Methodology)} 82(1): 39-67.
+{p_end}
+
+{phang}
+Cinelli, C., J. Ferwerda, and C. Hazlett. 2024.
+sensemakr: Sensitivity analysis tools for OLS in R and Stata.
+{it:Observational Studies} 10(2): 93-127.
+{browse "https://dx.doi.org/10.1353/obs.2024.a946583"}
+{p_end}
+
+{phang}
+Lonati, S. and J. N. Wulff. 2026.
+Why you should not use the ITCV with robust standard errors (and what to do instead).
+{it:SSRN Working Paper}.
+{p_end}
 
 
 {marker author}{...}

@@ -11,15 +11,28 @@ net install bootmakr, from("https://raw.githubusercontent.com/jespernwulff/bootm
 ## Quick Start
 
 ```stata
-* Basic bootstrap sensitivity analysis
-sysuse auto, clear
-bootmakr price mpg weight, treat(foreign) benchmark(weight) kd(1) reps(500) seed(12345)
+* Load Darfur data (Hazlett 2020)
+use "https://raw.githubusercontent.com/resonance1/sensemakr-stata/master/darfur.dta", clear
+
+* Standard bootstrap with benchmark
+bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+    treat(directlyharmed) benchmark(female) reps(500) seed(12345)
+
+* Clustered bootstrap
+bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+    treat(directlyharmed) benchmark(female) reps(500) seed(12345) ///
+    cluster(village_factor)
 
 * Multiple kd values with plot
-bootmakr price mpg weight, treat(foreign) benchmark(weight) kd(1 2 3) reps(500) seed(12345) plot
+bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+    treat(directlyharmed) benchmark(female) kd(1 2 3) ///
+    reps(500) seed(12345) cluster(village_factor) plot
 
 * Convergence diagnostics
-bootmakr price mpg weight, treat(foreign) benchmark(weight) kd(1) reps(2000) seed(12345) converge(minreps(200) stepsize(200))
+bootmakr peacefactor age farmer herder pastv hhsize female i.village_f, ///
+    treat(directlyharmed) gbenchmark(age farmer herder pastv hhsize female) ///
+    reps(1000) seed(12345) cluster(village_factor) ///
+    converge(minreps(100) stepsize(100))
 ```
 
 For full documentation, type `help bootmakr` in Stata after installation.
@@ -65,20 +78,13 @@ With `converge()`: additional scalars for SE/p-value CV, range, and means across
 - Stata 14.0+
 - `sensemakr` (Stata package)
 
-## Directory Structure
+## References
 
-```
-bootmakr/
-├── bootmakr.ado         # Installable program
-├── bootmakr.sthlp       # Help file
-├── bootmakr.pkg         # Package manifest
-├── stata.toc            # Package table of contents
-├── bootmakr.do          # Original development script
-├── legacy/              # Archived versions (never deleted)
-│   └── bootmakr.do
-├── CLAUDE.md            # Project rules and session log
-└── README.md            # This file
-```
+Cinelli, C. and C. Hazlett (2020). "Making sense of sensitivity: Extending omitted variable bias." *Journal of the Royal Statistical Society: Series B (Statistical Methodology)*, 82(1), 39-67.
+
+Cinelli, C., J. Ferwerda, and C. Hazlett (2024). "sensemakr: Sensitivity analysis tools for OLS in R and Stata." *Observational Studies*, 10(2), 93-127. [https://dx.doi.org/10.1353/obs.2024.a946583](https://dx.doi.org/10.1353/obs.2024.a946583).
+
+Lonati, S. and J. N. Wulff (2026). "Why you should not use the ITCV with robust standard errors (and what to do instead)." *SSRN Working Paper*.
 
 ## Author
 

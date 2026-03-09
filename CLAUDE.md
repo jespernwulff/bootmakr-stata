@@ -32,3 +32,18 @@ Read this file in full before doing anything in this project.
 - Test `net install` from the raw GitHub URL.
 - Consider adding a dedicated examples `.do` file.
 - Consider adding a version number scheme and changelog.
+
+### 2026-03-09 (session 3)
+**What was done:**
+- Repo name changed to `jespernwulff/bootmakr-stata` (separate from R package). Updated all URLs in README, `.pkg`, and `.sthlp`.
+- Initialized git, committed, and pushed to GitHub.
+- Fixed display formatting bug: long variable names (e.g., `directlyharmed`) broke the table layout. Column widths are now dynamic, computed from the longest row label with a minimum of 13 characters.
+- Replaced all examples (help file + README) with working Darfur data examples: standard bootstrap, clustered bootstrap, multiple kd with plot, group benchmark, convergence diagnostics, and saving/inspecting bootstrap draws.
+- Added References section to both `bootmakr.sthlp` and `README.md` citing Cinelli & Hazlett (2020), Cinelli, Ferwerda & Hazlett (2024), and Lonati & Wulff (2026).
+- Archived `bootmakr_examples_help_file.do` to `legacy/`.
+
+**What to do next:**
+- Commit and push session 3 changes.
+- Test `net install` end-to-end from the GitHub URL.
+- Test all help file examples run without error in Stata.
+- Consider adding a version number scheme and changelog.

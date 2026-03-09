@@ -383,26 +383,48 @@ program define bootmakr, rclass
         local kd_list "."
     }
 
+    // Compute label column width based on longest row label
+    local maxlablen = strlen("`treat'")
+    if `n_kd' > 1 {
+        foreach kd_val in `kd_list' {
+            local lablen = strlen("`treat'_`kd_val'")
+            if `lablen' > `maxlablen' {
+                local maxlablen = `lablen'
+            }
+        }
+    }
+    // Minimum width of 13 (matches Stata convention), plus 1 for padding
+    local labwidth = max(13, `maxlablen' + 1)
+    // Column positions relative to label width
+    local c_pipe  = `labwidth' + 1
+    local c_coef  = `labwidth' + 5
+    local c_se    = `labwidth' + 19
+    local c_pval  = `labwidth' + 32
+    local c_cil   = `labwidth' + 43
+    local c_ciu   = `labwidth' + 55
+    local rhs_width = 64
+    local total_width = `labwidth' + `rhs_width'
+
     // Display results in bootstrap-style format
-    display _newline as text "Bootstrap results" _col(49) "Number of obs" _col(67) "=" _col(69) as result %9.0fc `N'
-    display as text _col(49) "Replications" _col(67) "=" _col(69) as result %9.0fc `N_reps'
+    display _newline as text "Bootstrap results" _col(`=`total_width'-28') "Number of obs" _col(`=`total_width'-10') "=" _col(`=`total_width'-8') as result %9.0fc `N'
+    display as text _col(`=`total_width'-28') "Replications" _col(`=`total_width'-10') "=" _col(`=`total_width'-8') as result %9.0fc `N_reps'
 
     // Add cluster information if clustered with line break
     if "`cluster'" != "" {
         display ""
-        display as text _col(31) "(Replications based on " as result `N_clust' as text " clusters in " as result "`cluster'" as text ")"
+        display as text _col(`=`c_pipe'+4') "(Replications based on " as result `N_clust' as text " clusters in " as result "`cluster'" as text ")"
     }
 
     // Add program mode note
     if `program_mode' {
-        display as text _col(31) "(Using user-supplied program: " as result "`program'" as text ")"
+        display as text _col(`=`c_pipe'+4') "(Using user-supplied program: " as result "`program'" as text ")"
     }
 
-    display as text "{hline 13}{c TT}{hline 64}"
-    display as text _col(14) "{c |}" _col(21) "Observed" _col(34) "Bootstrap" _col(63) "Percentile"
-    display as text _col(14) "{c |}" _col(22) "Coef." _col(34) "Std. Err." _col(46) "P-value" ///
-        _col(58) "[" as text %2.0f `=(1-`alpha')*100' "% Conf. Interval]"
-    display as text "{hline 13}{c +}{hline 64}"
+    display as text "{hline `labwidth'}{c TT}{hline `rhs_width'}"
+    display as text _col(`c_pipe') "{c |}" _col(`=`c_coef'+3') "Observed" _col(`=`c_se'+1') "Bootstrap" _col(`=`c_ciu'+6') "Percentile"
+    display as text _col(`c_pipe') "{c |}" _col(`=`c_coef'+4') "Coef." _col(`=`c_se'+1') "Std. Err." _col(`=`c_pval'+1') "P-value" ///
+        _col(`=`c_cil'+1') "[" as text %2.0f `=(1-`alpha')*100' "% Conf. Interval]"
+    display as text "{hline `labwidth'}{c +}{hline `rhs_width'}"
 
     // Display results for each kd value
     local kd_counter = 1
@@ -415,17 +437,17 @@ program define bootmakr, rclass
             local rowlabel "`treat'"
         }
 
-        display as text "`rowlabel'" _col(14) "{c |}" ///
-            _col(18) as result %9.0g `obs_coef`kd_counter'' ///
-            _col(32) as result %9.0g `se_boot`kd_counter'' ///
-            _col(45) as result %7.4f `pvalue`kd_counter'' ///
-            _col(56) as result %9.0g `ci_lower`kd_counter'' ///
-            _col(68) as result %9.0g `ci_upper`kd_counter''
+        display as text "`rowlabel'" _col(`c_pipe') "{c |}" ///
+            _col(`c_coef') as result %9.0g `obs_coef`kd_counter'' ///
+            _col(`c_se') as result %9.0g `se_boot`kd_counter'' ///
+            _col(`=`c_pval'+1') as result %7.4f `pvalue`kd_counter'' ///
+            _col(`=`c_cil'+1') as result %9.0g `ci_lower`kd_counter'' ///
+            _col(`=`c_ciu'+1') as result %9.0g `ci_upper`kd_counter''
 
         local ++kd_counter
     }
 
-    display as text "{hline 13}{c BT}{hline 64}"
+    display as text "{hline `labwidth'}{c BT}{hline `rhs_width'}"
 
     // Note about method
     display as text "Note: CI is percentile bootstrap confidence interval"
