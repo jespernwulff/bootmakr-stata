@@ -1,4 +1,4 @@
-*! version 1.0.0  09mar2026  Jesper N. Wulff
+*! version 1.0.1  12may2026  Jesper N. Wulff
 *! bootmakr: Bootstrap inference for sensemakr sensitivity analysis
 program define bootmakr, rclass
     version 14.0
@@ -421,7 +421,7 @@ program define bootmakr, rclass
     }
 
     display as text "{hline `labwidth'}{c TT}{hline `rhs_width'}"
-    display as text _col(`c_pipe') "{c |}" _col(`=`c_coef'+3') "Observed" _col(`=`c_se'+1') "Bootstrap" _col(`=`c_ciu'+6') "Percentile"
+    display as text _col(`c_pipe') "{c |}" _col(`=`c_coef'+3') "Observed" _col(`=`c_se'+1') "Bootstrap" _col(`=`c_cil'+6') "Percentile"
     display as text _col(`c_pipe') "{c |}" _col(`=`c_coef'+4') "Coef." _col(`=`c_se'+1') "Std. Err." _col(`=`c_pval'+1') "P-value" ///
         _col(`=`c_cil'+1') "[" as text %2.0f `=(1-`alpha')*100' "% Conf. Interval]"
     display as text "{hline `labwidth'}{c +}{hline `rhs_width'}"
