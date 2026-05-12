@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0  09mar2026}{...}
+{* *! version 1.0.1  12may2026}{...}
 {viewerjumpto "Syntax" "bootmakr##syntax"}{...}
 {viewerjumpto "Description" "bootmakr##description"}{...}
 {viewerjumpto "Options" "bootmakr##options"}{...}

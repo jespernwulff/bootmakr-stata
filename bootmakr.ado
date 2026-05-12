@@ -1,4 +1,4 @@
-*! version 1.0.0  09mar2026  Jesper N. Wulff
+*! version 1.0.1  12may2026  Jesper N. Wulff
 *! bootmakr: Bootstrap inference for sensemakr sensitivity analysis
 program define bootmakr, rclass
     version 14.0
