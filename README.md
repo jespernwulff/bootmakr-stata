@@ -112,8 +112,8 @@ Cinelli, C., J. Ferwerda, and C. Hazlett (2024). "sensemakr: Sensitivity analysi
 
 Lonati, S. and J. N. Wulff (2026). "Why you should not use the ITCV with robust standard errors (and what to do instead)." *SSRN Working Paper*.
 
-## Author
+## Authors
 
-Jesper N. Wulff
+Jesper N. Wulff and Sirio Lonati
 
 Bug reports and feature requests: [GitHub Issues](https://github.com/jespernwulff/bootmakr-stata/issues)

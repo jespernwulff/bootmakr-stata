@@ -6,7 +6,7 @@
 {viewerjumpto "Benchmark strength" "bootmakr##strength"}{...}
 {viewerjumpto "Stored results" "bootmakr##results"}{...}
 {viewerjumpto "Examples" "bootmakr##examples"}{...}
-{viewerjumpto "Author" "bootmakr##author"}{...}
+{viewerjumpto "Authors" "bootmakr##author"}{...}
 {title:Title}
 
 {p2colset 5 20 22 2}{...}
@@ -425,10 +425,10 @@ Why you should not use the ITCV with robust standard errors (and what to do inst
 
 
 {marker author}{...}
-{title:Author}
+{title:Authors}
 
 {pstd}
-Jesper N. Wulff{p_end}
+Jesper N. Wulff and Sirio Lonati{p_end}
 
 {pstd}
 Bug reports and feature requests:{p_end}
