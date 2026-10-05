@@ -1,8 +1,9 @@
 {smcl}
-{* *! version 1.0.1  12may2026}{...}
+{* *! version 1.1.0  05oct2026}{...}
 {viewerjumpto "Syntax" "bootmakr##syntax"}{...}
 {viewerjumpto "Description" "bootmakr##description"}{...}
 {viewerjumpto "Options" "bootmakr##options"}{...}
+{viewerjumpto "Benchmark strength" "bootmakr##strength"}{...}
 {viewerjumpto "Stored results" "bootmakr##results"}{...}
 {viewerjumpto "Examples" "bootmakr##examples"}{...}
 {viewerjumpto "Author" "bootmakr##author"}{...}
@@ -56,16 +57,18 @@ Program mode
 {syntab:Sensitivity (standard mode)}
 {synopt:{opth benchmark(varlist)}}benchmark covariate(s) for bound calculation{p_end}
 {synopt:{opth gbenchmark(varlist)}}group benchmark covariate(s){p_end}
-{synopt:{opt kd(numlist)}}multiplier(s) for benchmark strength on treatment; accepts multiple values{p_end}
+{synopt:{opt kd(numlist)}}multiplier(s) for benchmark strength on treatment; default is {cmd:kd(1)}; accepts multiple values{p_end}
 {synopt:{opt ky(numlist)}}multiplier(s) for benchmark strength on outcome; defaults to {cmd:kd}{p_end}
-{synopt:{opt kr(numlist)}}relative strength parameter(s); values in (0, 1]{p_end}
 {synopt:{opt q(#)}}percentage of treatment effect to explain; default is {cmd:q(1)}{p_end}
+{synopt:{opt suppress}}suppress {cmd:sensemakr} output{p_end}
+{synopt:{opt boundsindex(# #)}}row and column indices for {cmd:e(bounds)}; default is {cmd:1 5}{p_end}
+
+{syntab:Passed on to sensemakr unchanged; see {help bootmakr##passthrough:remark}}
+{synopt:{opt kr(numlist)}}relative strength parameter(s); values in (0, 1]{p_end}
 {synopt:{opth r2dxj_x(numlist)}}partial R-squared of confounder with treatment{p_end}
 {synopt:{opth r2yxj_dx(numlist)}}partial R-squared of confounder with outcome{p_end}
 {synopt:{opt bound_label(string)}}custom label for the bounds{p_end}
 {synopt:{opt reduce}}use reduce formula for bound{p_end}
-{synopt:{opt suppress}}suppress {cmd:sensemakr} output{p_end}
-{synopt:{opt boundsindex(# #)}}row and column indices for {cmd:e(bounds)}; default is {cmd:1 5}{p_end}
 
 {syntab:Significance}
 {synopt:{opt alpha(#)}}significance level; default is {cmd:alpha(0.05)}{p_end}
@@ -80,8 +83,10 @@ Program mode
 {p2colreset}{...}
 
 {pstd}
-{cmd:fweight}s, {cmd:aweight}s, {cmd:pweight}s, and {cmd:iweight}s are allowed;
-see {help weight}.
+{cmd:fweight}s, {cmd:aweight}s, {cmd:pweight}s, and {cmd:iweight}s are passed
+on to {cmd:sensemakr}; see {help weight}. The current version of
+{cmd:sensemakr} does not accept weights, so specifying them in standard mode
+stops with error r(101).
 
 
 {marker description}{...}
@@ -109,6 +114,15 @@ This mode is useful when you need to control the estimation before
 When multiple {cmd:kd} values are specified, {cmd:bootmakr} bootstraps each
 bound separately and reports results for each. The {opt plot} option
 produces a coefficient plot across {cmd:kd} values.
+
+{pstd}
+Below the bootstrap table {cmd:bootmakr} reports how strong the benchmark
+is, and therefore how strong the hypothetical omitted variable is assumed to
+be; see {help bootmakr##strength:Benchmark strength}.
+
+{pstd}
+Worked examples, including a step-by-step replication of a published study,
+are available at {browse "https://jespernwulff.github.io/bootmakr/"}.
 
 
 {marker options}{...}
@@ -174,7 +188,9 @@ covariates.
 
 {phang}
 {opt kd(numlist)} specifies one or more multipliers for benchmark
-strength on treatment. When multiple values are given (e.g.,
+strength on treatment: the omitted variable is assumed {it:kd} times as
+strong as the benchmark. The default is {cmd:kd(1)}, an omitted variable
+exactly as strong as the benchmark. When multiple values are given (e.g.,
 {cmd:kd(1 2 3)}), {cmd:bootmakr} bootstraps each bound separately.
 
 {phang}
@@ -210,6 +226,17 @@ the confounder with the outcome.
 {phang}
 {opt boundsindex(# #)} specifies the row and column indices used to
 extract the bound from {cmd:e(bounds)}. The default is {cmd:1 5}.
+
+{marker passthrough}{...}
+{pstd}
+{bf:Remark.} {opt kr()}, {opt r2dxj_x()}, {opt r2yxj_dx()},
+{opt bound_label()} and {opt reduce} are passed on to {cmd:sensemakr}
+unchanged and therefore require a version of {cmd:sensemakr} that accepts
+them. The version distributed by SSC at the time of writing (distribution
+date 28 April 2020) does not: with it these five options stop with error
+r(198). Every other option documented here works with that version. A
+benchmark is required in standard mode: specify {opt benchmark()} or
+{opt gbenchmark()}.
 
 {dlgtab:Significance}
 
@@ -257,6 +284,36 @@ convergence statistics are reported. The default is 75% of {cmd:reps()}.
 {opt savedata(filename)} saves the convergence data to {it:filename}.
 
 
+{marker strength}{...}
+{title:Benchmark strength}
+
+{pstd}
+The bootstrap table is followed by a descriptive block with two parts.
+
+{phang2}
+{bf:Observed strength of the benchmark}: the partial R-squared of the
+benchmark with the treatment given the other covariates, and with the
+outcome given the treatment and the covariates, together with their square
+roots (absolute partial correlations). With {opt gbenchmark()} the group
+partial R-squared is reported; with several {opt benchmark()} variables, the
+first one (the one the adjusted estimates refer to).
+
+{phang2}
+{bf:Implied strength of the omitted variable} at each {cmd:kd}:
+{cmd:sensemakr}'s bounds on the same two partial R-squared values, and the
+corresponding absolute partial correlations. The adjusted estimates are
+based on these values.
+
+{pstd}
+Both parts are functions of the data alone. No standard error enters them,
+so they do not depend on the variance estimator and are not bootstrapped.
+They translate "{it:kd} times as strong as the benchmark" into the
+partial-correlation scale familiar from the impact threshold of a
+confounding variable (ITCV). No t-implied correlation or threshold is
+reported. In program mode only the implied part is available, and only if
+the user program leaves {cmd:sensemakr}'s {cmd:e(bounds)} behind.
+
+
 {marker results}{...}
 {title:Stored results}
 
@@ -274,6 +331,10 @@ convergence statistics are reported. The default is 75% of {cmd:reps()}.
 {synopt:{cmd:r(ci_lower)}}lower bound of percentile CI{p_end}
 {synopt:{cmd:r(ci_upper)}}upper bound of percentile CI{p_end}
 {synopt:{cmd:r(p)}}bootstrap p-value (two-sided){p_end}
+{synopt:{cmd:r(r2dxj_x)}}partial R-squared of the benchmark with the treatment{p_end}
+{synopt:{cmd:r(r2yxj_dx)}}partial R-squared of the benchmark with the outcome{p_end}
+{synopt:{cmd:r(r2dz_x)}}implied partial R-squared of the omitted variable with the treatment (first {cmd:kd} value){p_end}
+{synopt:{cmd:r(r2yz_dx)}}implied partial R-squared of the omitted variable with the outcome (first {cmd:kd} value){p_end}
 
 {p2col 5 25 29 2: Scalars (convergence, if {cmd:converge()} specified)}{p_end}
 {synopt:{cmd:r(conv_se_mean)}}mean SE across replication counts{p_end}
@@ -293,6 +354,7 @@ convergence statistics are reported. The default is 75% of {cmd:reps()}.
 {p2col 5 25 29 2: Matrices}{p_end}
 {synopt:{cmd:r(ci_percentile)}}percentile CI bounds (2 x {it:k} matrix){p_end}
 {synopt:{cmd:r(results)}}results matrix with columns: estimate, se, ci_lower, ci_upper, pvalue (if multiple {cmd:kd} values){p_end}
+{synopt:{cmd:r(benchmark_strength)}}implied strength of the omitted variable, one row per {cmd:kd}, with columns: kd, ky, r2dz_x, r2yz_dx, r_dz_x, r_yz_dx{p_end}
 {synoptline}
 
 
