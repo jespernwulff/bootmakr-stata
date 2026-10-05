@@ -1,5 +1,5 @@
 v 3
-d Jesper N. Wulff
+d Jesper N. Wulff and Sirio Lonati
 d
 d Bootstrap inference for sensemakr sensitivity analysis
 d

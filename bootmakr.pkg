@@ -1,7 +1,7 @@
 v 3
 d bootmakr: Bootstrap inference for sensemakr sensitivity analysis
 d
-d Author: Jesper N. Wulff
+d Authors: Jesper N. Wulff and Sirio Lonati
 d Support: https://github.com/jespernwulff/bootmakr-stata/issues
 d
 d Distribution-Date: 20261005
