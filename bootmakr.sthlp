@@ -59,14 +59,16 @@ Program mode
 {synopt:{opth gbenchmark(varlist)}}group benchmark covariate(s){p_end}
 {synopt:{opt kd(numlist)}}multiplier(s) for benchmark strength on treatment; default is {cmd:kd(1)}; accepts multiple values{p_end}
 {synopt:{opt ky(numlist)}}multiplier(s) for benchmark strength on outcome; defaults to {cmd:kd}{p_end}
-{synopt:{opt kr(numlist)}}relative strength parameter(s); values in (0, 1]{p_end}
 {synopt:{opt q(#)}}percentage of treatment effect to explain; default is {cmd:q(1)}{p_end}
+{synopt:{opt suppress}}suppress {cmd:sensemakr} output{p_end}
+{synopt:{opt boundsindex(# #)}}row and column indices for {cmd:e(bounds)}; default is {cmd:1 5}{p_end}
+
+{syntab:Passed on to sensemakr unchanged; see {help bootmakr##passthrough:remark}}
+{synopt:{opt kr(numlist)}}relative strength parameter(s); values in (0, 1]{p_end}
 {synopt:{opth r2dxj_x(numlist)}}partial R-squared of confounder with treatment{p_end}
 {synopt:{opth r2yxj_dx(numlist)}}partial R-squared of confounder with outcome{p_end}
 {synopt:{opt bound_label(string)}}custom label for the bounds{p_end}
 {synopt:{opt reduce}}use reduce formula for bound{p_end}
-{synopt:{opt suppress}}suppress {cmd:sensemakr} output{p_end}
-{synopt:{opt boundsindex(# #)}}row and column indices for {cmd:e(bounds)}; default is {cmd:1 5}{p_end}
 
 {syntab:Significance}
 {synopt:{opt alpha(#)}}significance level; default is {cmd:alpha(0.05)}{p_end}
@@ -224,6 +226,17 @@ the confounder with the outcome.
 {phang}
 {opt boundsindex(# #)} specifies the row and column indices used to
 extract the bound from {cmd:e(bounds)}. The default is {cmd:1 5}.
+
+{marker passthrough}{...}
+{pstd}
+{bf:Remark.} {opt kr()}, {opt r2dxj_x()}, {opt r2yxj_dx()},
+{opt bound_label()} and {opt reduce} are passed on to {cmd:sensemakr}
+unchanged and therefore require a version of {cmd:sensemakr} that accepts
+them. The version distributed by SSC at the time of writing (distribution
+date 28 April 2020) does not: with it these five options stop with error
+r(198). Every other option documented here works with that version. A
+benchmark is required in standard mode: specify {opt benchmark()} or
+{opt gbenchmark()}.
 
 {dlgtab:Significance}
 

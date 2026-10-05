@@ -111,13 +111,24 @@ program define bootmakr, rclass
         }
     }
 
+    // A benchmark is needed in standard mode: without one sensemakr leaves no
+    // e(bounds) behind and there is nothing to bootstrap.
+    if !`program_mode' & "`benchmark'" == "" & "`gbenchmark'" == "" & ///
+        "`r2dxj_x'" == "" & "`r2yxj_dx'" == "" {
+        display as error "benchmark() or gbenchmark() required"
+        exit 198
+    }
+
     // Handle level() / alpha() interaction
-    // level(cilevel) uses Stata's built-in validation (1-99.99)
-    if "`level'" != "" & `alpha' != 0.05 {
+    // level(cilevel) uses Stata's built-in validation (1-99.99). It is never
+    // empty: when level() is not typed it holds the session default,
+    // c(level). So alpha() and level() conflict only if both differ from
+    // their defaults.
+    if `alpha' != 0.05 & `level' != c(level) {
         display as error "level() and alpha() are mutually exclusive"
         exit 198
     }
-    if "`level'" != "" {
+    if `alpha' == 0.05 {
         local alpha = 1 - `level'/100
     }
 
