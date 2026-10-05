@@ -1,4 +1,4 @@
-*! version 1.0.1  12may2026  Jesper N. Wulff
+*! version 1.1.0  05oct2026  Jesper N. Wulff
 *! bootmakr: Bootstrap inference for sensemakr sensitivity analysis
 program define bootmakr, rclass
     version 14.0
@@ -192,6 +192,17 @@ program define bootmakr, rclass
     local idx1 : word 1 of `boundsindex'
     local idx2 : word 2 of `boundsindex'
 
+    // Default kd = 1 in standard mode (an omitted variable exactly as strong
+    // as the benchmark), matching the R implementation. Without this,
+    // sensemakr's own default sweep kd = 1 2 3 runs inside every bootstrap
+    // replication and its kd = 3 row can fail ("Implied bound on r2yz_dx
+    // greater than 1"), which drops the whole replication although only the
+    // kd = 1 row is used. In program() mode kd is the user program's
+    // business and is left untouched.
+    if !`program_mode' & "`kd'" == "" {
+        local kd 1
+    }
+
     // Handle ky defaulting to kd (relevant for standard mode and display)
     if "`ky'" == "" & "`kd'" != "" {
         local ky "`kd'"
@@ -222,10 +233,7 @@ program define bootmakr, rclass
         local wgt [`weight'`exp']
     }
 
-    // Set seed if provided
-    if `seed' > 0 {
-        set seed `seed'
-    }
+    // (the seed is set immediately before the bootstrap call, below)
 
     // Build bootstrap expressions for multiple kd values
     local bs_exp ""
@@ -327,6 +335,83 @@ program define bootmakr, rclass
         if "`suppress'" != "" {
             local smcmd "`smcmd' suppress"
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Descriptive benchmark strength (no standard errors involved)
+    // ------------------------------------------------------------------
+    // (a) implied strength of the omitted variable at each kd/ky, read
+    //     from e(bounds) (columns r2dz_x, r2yz_dx) of a full-sample run of
+    //     the sensitivity command;
+    // (b) observed strength of the benchmark itself: partial R2 with the
+    //     treatment given the other covariates (r2dxj_x) and with the
+    //     outcome given treatment and covariates (r2yxj_dx), computed as in
+    //     sensemakr's benchmarking routine (standard mode only; with several
+    //     benchmark() variables, the first one -- the one the adjusted
+    //     estimates refer to).
+    // Both are functions of the data alone and unaffected by the choice of
+    // variance estimator. No t-implied correlation or threshold is
+    // computed. The full-sample run draws no random numbers, so the
+    // bootstrap replications below are unchanged.
+    tempname bstr bnds
+    local have_bstr = 0
+    local have_obs  = 0
+    quietly `smcmd'
+    capture confirm matrix e(bounds)
+    if _rc == 0 {
+        matrix `bnds' = e(bounds)
+        local bcols : colnames `bnds'
+        local c_kd : list posof "kd" in bcols
+        local c_ky : list posof "ky" in bcols
+        local c_dz : list posof "r2dz_x" in bcols
+        local c_yz : list posof "r2yz_dx" in bcols
+        if `c_dz' > 0 & `c_yz' > 0 & rowsof(`bnds') >= `n_kd' {
+            matrix `bstr' = J(`n_kd', 6, .)
+            forvalues i = 1/`n_kd' {
+                if `c_kd' > 0 matrix `bstr'[`i', 1] = el(`bnds', `i', `c_kd')
+                if `c_ky' > 0 matrix `bstr'[`i', 2] = el(`bnds', `i', `c_ky')
+                matrix `bstr'[`i', 3] = el(`bnds', `i', `c_dz')
+                matrix `bstr'[`i', 4] = el(`bnds', `i', `c_yz')
+                matrix `bstr'[`i', 5] = sqrt(el(`bnds', `i', `c_dz'))
+                matrix `bstr'[`i', 6] = sqrt(el(`bnds', `i', `c_yz'))
+            }
+            matrix colnames `bstr' = kd ky r2dz_x r2yz_dx r_dz_x r_yz_dx
+            local have_bstr = 1
+        }
+    }
+    if !`program_mode' {
+        local depvar : word 1 of `varlist'
+        local regs : list varlist - depvar
+        local regs_treat : list regs - treat
+        local bench_vars ""
+        if "`gbenchmark'" != "" {
+            local bench_vars "`gbenchmark'"
+            local bench_lab = subinstr("`gbenchmark'", " ", "+", .)
+        }
+        else if "`benchmark'" != "" {
+            local bench_vars : word 1 of `benchmark'
+            local bench_lab "`bench_vars'"
+        }
+        if "`bench_vars'" != "" {
+            capture {
+                quietly regress `depvar' `regs' if `touse'
+                local rss_full = e(rss)
+                local regs_omit : list regs - bench_vars
+                quietly regress `depvar' `regs_omit' if `touse'
+                local r2yxj_dx = (e(rss) - `rss_full') / e(rss)
+                quietly regress `treat' `regs_treat' if `touse'
+                local rss_full = e(rss)
+                local regs_omit : list regs_treat - bench_vars
+                quietly regress `treat' `regs_omit' if `touse'
+                local r2dxj_x = (e(rss) - `rss_full') / e(rss)
+            }
+            if _rc == 0 local have_obs = 1
+        }
+    }
+
+    // Set seed if provided (immediately before the bootstrap)
+    if `seed' > 0 {
+        set seed `seed'
     }
 
     // Run bootstrap
@@ -476,6 +561,42 @@ program define bootmakr, rclass
     // Additional info if there were failed replications
     if `N_misreps' > 0 {
         display as text "Warning: " as result `N_misreps' as text " replications failed"
+    }
+
+    // ------------------------------------------------------------------
+    // Benchmark strength (descriptive)
+    // ------------------------------------------------------------------
+    if `have_bstr' {
+        display _newline as text "Benchmark strength (descriptive; no standard errors involved)"
+        display as text "{hline 78}"
+        if `have_obs' {
+            local tlab = abbrev("`treat'", 16)
+            local ylab = abbrev("`depvar'", 16)
+            display as text "Benchmark: " as result "`bench_lab'"
+            display as text _col(50) "Partial R2" _col(64) "|Partial corr.|"
+            display as text "  with `tlab' | X" ///
+                _col(51) as result %9.4f `r2dxj_x' _col(72) as result %6.3f sqrt(`r2dxj_x')
+            display as text "  with `ylab' | `tlab', X" ///
+                _col(51) as result %9.4f `r2yxj_dx' _col(72) as result %6.3f sqrt(`r2yxj_dx')
+            display as text "{hline 78}"
+        }
+        display as text "Implied strength of the omitted variable (sensemakr bounds):"
+        display as text _col(6) "kd" _col(14) "ky" _col(22) "R2dz.x" _col(33) "R2yz.dx" ///
+            _col(44) "|r_dz.x|" _col(55) "|r_yz.dx|"
+        forvalues i = 1/`n_kd' {
+            display as result _col(3) %5.2f el(`bstr', `i', 1) _col(11) %5.2f el(`bstr', `i', 2) ///
+                _col(22) %7.4f el(`bstr', `i', 3) _col(33) %7.4f el(`bstr', `i', 4) ///
+                _col(45) %6.3f el(`bstr', `i', 5) _col(56) %6.3f el(`bstr', `i', 6)
+        }
+        display as text "{hline 78}"
+        display as text "Note: R2dz.x (R2yz.dx) = partial R2 of the omitted variable with the"
+        display as text "      treatment given the covariates (with the outcome given treatment"
+        display as text "      and covariates). |r| = square root, i.e. the partial-correlation"
+        display as text "      scale of the ITCV. Descriptive only: no t-implied correlation or"
+        display as text "      threshold is reported."
+    }
+    else if !`program_mode' {
+        display as text "Note: benchmark strength not available (sensemakr returned no e(bounds))"
     }
 
     // Create plot if requested and multiple kd values
@@ -737,6 +858,17 @@ program define bootmakr, rclass
     return scalar ci_lower = `ci_lower1'
     return scalar ci_upper = `ci_upper1'
     return scalar p = `pvalue1'
+
+    // Benchmark strength (descriptive)
+    if `have_obs' {
+        return scalar r2dxj_x  = `r2dxj_x'
+        return scalar r2yxj_dx = `r2yxj_dx'
+    }
+    if `have_bstr' {
+        return scalar r2dz_x  = el(`bstr', 1, 3)
+        return scalar r2yz_dx = el(`bstr', 1, 4)
+        return matrix benchmark_strength = `bstr'
+    }
 
     // Return matrix with all results if multiple kd
     if `n_kd' > 1 {
