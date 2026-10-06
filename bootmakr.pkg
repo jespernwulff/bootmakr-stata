@@ -4,7 +4,8 @@ d
 d Authors: Jesper N. Wulff and Sirio Lonati
 d Support: https://github.com/jespernwulff/bootmakr-stata/issues
 d
-d Distribution-Date: 20261005
+d Distribution-Date: 20261006
 d
 f bootmakr.ado
 f bootmakr.sthlp
+f firms.dta
