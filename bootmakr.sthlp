@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.1.0  05oct2026}{...}
+{* *! version 1.2.0  06oct2026}{...}
 {viewerjumpto "Syntax" "bootmakr##syntax"}{...}
 {viewerjumpto "Description" "bootmakr##description"}{...}
 {viewerjumpto "Options" "bootmakr##options"}{...}
@@ -111,18 +111,32 @@ This mode is useful when you need to control the estimation before
 {cmd:sensemakr}, e.g., running a specific regression first.
 
 {pstd}
+The bootstrap replaces the analytic confidence interval of {cmd:sensemakr},
+which rests on the conventional OLS variance formula, and with it the
+impact threshold of a confounding variable (ITCV), whose reading as a
+product of correlations breaks down when the regression calls for
+heteroskedasticity- or cluster-robust standard errors (Lonati and Wulff
+2026). The procedure follows Cinelli, Ferwerda, and Hazlett (2024, Appendix
+C): resample the data as you would choose standard errors (observations,
+or whole clusters with {opt cluster()}), rerun {cmd:sensemakr} and keep the
+bias-adjusted estimate in every replication.
+
+{pstd}
 When multiple {cmd:kd} values are specified, {cmd:bootmakr} bootstraps each
-bound separately and reports results for each. The {opt plot} option
-produces a coefficient plot across {cmd:kd} values.
+bound separately and reports results for each; the p-value of each {cmd:kd}
+uses that {cmd:kd}'s own number of successful replications as denominator.
+The {opt plot} option produces a coefficient plot across {cmd:kd} values.
 
 {pstd}
 Below the bootstrap table {cmd:bootmakr} reports how strong the benchmark
 is, and therefore how strong the hypothetical omitted variable is assumed to
-be; see {help bootmakr##strength:Benchmark strength}.
+be, including its impact on the scale of the ITCV; see
+{help bootmakr##strength:Benchmark strength}.
 
 {pstd}
-Worked examples, including a step-by-step replication of a published study,
-are available at {browse "https://jespernwulff.github.io/bootmakr/"}.
+A getting-started guide, a step-by-step replication of a published study and
+the argument behind the command are at
+{browse "https://jespernwulff.github.io/bootmakr/"}.
 
 
 {marker options}{...}
@@ -300,18 +314,29 @@ first one (the one the adjusted estimates refer to).
 
 {phang2}
 {bf:Implied strength of the omitted variable} at each {cmd:kd}:
-{cmd:sensemakr}'s bounds on the same two partial R-squared values, and the
-corresponding absolute partial correlations. The adjusted estimates are
-based on these values.
+{cmd:sensemakr}'s bounds on the same two partial R-squared values, which the
+adjusted estimates are based on, and the {bf:impact} of the omitted
+variable: the product of its partial correlations with the outcome and with
+the treatment, both given the covariates only. This is the scale on which
+the impact threshold of a confounding variable (ITCV) is stated, so that a
+reader used to the ITCV can judge how strong the assumed omitted variable
+is. {cmd:sensemakr}'s outcome bound conditions on the treatment as well; the
+correlation given the covariates only is recovered with the recursion
+formula for partial correlations, r_yz.x = r_yz.dx * sqrt((1 - r_yd.x^2)(1 -
+r_dz.x^2)) + r_yd.x * r_dz.x, where r_yd.x is the partial correlation of
+outcome and treatment given the covariates ({cmd:sensemakr}'s
+{cmd:e(r2yd_x)}, signed). The bounds identify magnitudes only, so the signs
+are set to the case the adjustment removes: the omitted variable biases the
+estimate away from zero (towards zero with {opt reduce}).
 
 {pstd}
 Both parts are functions of the data alone. No standard error enters them,
 so they do not depend on the variance estimator and are not bootstrapped.
-They translate "{it:kd} times as strong as the benchmark" into the
-partial-correlation scale familiar from the impact threshold of a
-confounding variable (ITCV). No t-implied correlation or threshold is
-reported. In program mode only the implied part is available, and only if
-the user program leaves {cmd:sensemakr}'s {cmd:e(bounds)} behind.
+None of them is a threshold, and no t-implied correlation is reported: the
+impact is comparable with the strength of an observed variable, not with an
+ITCV computed from robust standard errors. In program mode only the implied
+part is available, and only if the user program leaves {cmd:sensemakr}'s
+{cmd:e()} results behind.
 
 
 {marker results}{...}
@@ -324,7 +349,7 @@ the user program leaves {cmd:sensemakr}'s {cmd:e(bounds)} behind.
 {p2col 5 25 29 2: Scalars}{p_end}
 {synopt:{cmd:r(N)}}number of observations{p_end}
 {synopt:{cmd:r(N_reps)}}number of bootstrap replications{p_end}
-{synopt:{cmd:r(N_successful)}}number of successful replications{p_end}
+{synopt:{cmd:r(N_successful)}}number of replications in which every bound was computed{p_end}
 {synopt:{cmd:r(N_clust)}}number of clusters (if {cmd:cluster()} specified){p_end}
 {synopt:{cmd:r(estimate)}}point estimate (first {cmd:kd} value){p_end}
 {synopt:{cmd:r(se)}}bootstrap standard error{p_end}
@@ -335,6 +360,8 @@ the user program leaves {cmd:sensemakr}'s {cmd:e(bounds)} behind.
 {synopt:{cmd:r(r2yxj_dx)}}partial R-squared of the benchmark with the outcome{p_end}
 {synopt:{cmd:r(r2dz_x)}}implied partial R-squared of the omitted variable with the treatment (first {cmd:kd} value){p_end}
 {synopt:{cmd:r(r2yz_dx)}}implied partial R-squared of the omitted variable with the outcome (first {cmd:kd} value){p_end}
+{synopt:{cmd:r(impact)}}impact of the omitted variable on the scale of the ITCV (first {cmd:kd} value){p_end}
+{synopt:{cmd:r(r_yd_x)}}partial correlation of the outcome with the treatment given the covariates{p_end}
 
 {p2col 5 25 29 2: Scalars (convergence, if {cmd:converge()} specified)}{p_end}
 {synopt:{cmd:r(conv_se_mean)}}mean SE across replication counts{p_end}
@@ -353,8 +380,8 @@ the user program leaves {cmd:sensemakr}'s {cmd:e(bounds)} behind.
 
 {p2col 5 25 29 2: Matrices}{p_end}
 {synopt:{cmd:r(ci_percentile)}}percentile CI bounds (2 x {it:k} matrix){p_end}
-{synopt:{cmd:r(results)}}results matrix with columns: estimate, se, ci_lower, ci_upper, pvalue (if multiple {cmd:kd} values){p_end}
-{synopt:{cmd:r(benchmark_strength)}}implied strength of the omitted variable, one row per {cmd:kd}, with columns: kd, ky, r2dz_x, r2yz_dx, r_dz_x, r_yz_dx{p_end}
+{synopt:{cmd:r(results)}}results matrix with columns: estimate, se, ci_lower, ci_upper, pvalue, N_ok (if multiple {cmd:kd} values); N_ok is the number of successful replications behind that row{p_end}
+{synopt:{cmd:r(benchmark_strength)}}implied strength of the omitted variable, one row per {cmd:kd}, with columns: kd, ky, r2dz_x, r2yz_dx, r_dz_x, r_yz_dx, r_yz_x, impact{p_end}
 {synoptline}
 
 
@@ -362,43 +389,43 @@ the user program leaves {cmd:sensemakr}'s {cmd:e(bounds)} behind.
 {title:Examples}
 
 {pstd}
-These examples use the Darfur data from Hazlett (2020), available at:{p_end}
-{phang2}{cmd:. use "https://raw.githubusercontent.com/resonance1/sensemakr-stata/master/darfur.dta", clear}{p_end}
+The examples use {cmd:firms.dta}, a simulated panel of 250 firms observed for
+20 years that comes with the command. The true effect of {cmd:x} on {cmd:y}
+is 0.25. An unobserved firm-level variable {cmd:q}, as strong as the
+observed control {cmd:c}, biases the regression that omits it, and the
+within-firm components of {cmd:x} and of the disturbance are persistent, so
+standard errors must be clustered by firm. {cmd:net get} copies the file into
+the current folder.{p_end}
+{phang2}{cmd:. net get bootmakr, from("https://raw.githubusercontent.com/jespernwulff/bootmakr-stata/main/")}{p_end}
+{phang2}{cmd:. use firms, clear}{p_end}
 
-{pstd}Standard bootstrap with benchmark{p_end}
-{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
-{phang2}{cmd:     treat(directlyharmed) benchmark(female) reps(500) seed(12345)}{p_end}
+{pstd}An omitted variable as strong as {cmd:c} ({cmd:kd(1)}, the default); firms resampled as whole clusters{p_end}
+{phang2}{cmd:. bootmakr y x c, treat(x) benchmark(c) cluster(firm) seed(123)}{p_end}
 
-{pstd}Clustered bootstrap{p_end}
-{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
-{phang2}{cmd:     treat(directlyharmed) benchmark(female) reps(500) seed(12345)}{p_end}
-{phang2}{cmd:     cluster(village_factor)}{p_end}
+{pstd}Several strengths at once, with the plot{p_end}
+{phang2}{cmd:. bootmakr y x c, treat(x) benchmark(c) kd(0.5 0.75 1 1.25 1.5) cluster(firm) seed(123) plot}{p_end}
+{phang2}{cmd:. matrix list r(results)}{p_end}
+{phang2}{cmd:. matrix list r(benchmark_strength)}{p_end}
 
-{pstd}Multiple kd values with plot{p_end}
-{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
-{phang2}{cmd:     treat(directlyharmed) benchmark(female) kd(1 2 3)}{p_end}
-{phang2}{cmd:     reps(500) seed(12345) cluster(village_factor) plot}{p_end}
-
-{pstd}Group benchmark{p_end}
-{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
-{phang2}{cmd:     treat(directlyharmed)}{p_end}
-{phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
-{phang2}{cmd:     reps(500) seed(12345) cluster(village_factor) kd(1 2 3) plot}{p_end}
+{pstd}Observations rather than firms resampled (heteroskedasticity only){p_end}
+{phang2}{cmd:. bootmakr y x c, treat(x) benchmark(c) seed(123)}{p_end}
 
 {pstd}Convergence diagnostics{p_end}
-{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
-{phang2}{cmd:     treat(directlyharmed)}{p_end}
-{phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
-{phang2}{cmd:     reps(1000) seed(12345) cluster(village_factor)}{p_end}
-{phang2}{cmd:     converge(minreps(100) stepsize(100))}{p_end}
+{phang2}{cmd:. bootmakr y x c, treat(x) benchmark(c) cluster(firm) reps(5000) seed(123)}{p_end}
+{phang2}{cmd:     converge(minreps(500) stepsize(500))}{p_end}
 
-{pstd}Saving and inspecting bootstrap draws{p_end}
-{phang2}{cmd:. bootmakr peacefactor directlyharmed age farmer herder pastv hhsize female i.village_f,}{p_end}
-{phang2}{cmd:     treat(directlyharmed)}{p_end}
-{phang2}{cmd:     gbenchmark(age farmer herder pastv hhsize female)}{p_end}
-{phang2}{cmd:     reps(500) seed(12345) cluster(village_factor)}{p_end}
-{phang2}{cmd:     converge(minreps(100) stepsize(100) savedata(my_convergence_data))}{p_end}
-{phang2}{cmd:. use my_convergence_data.dta, clear}{p_end}
+{pstd}Saving the bootstrap draws{p_end}
+{phang2}{cmd:. bootmakr y x c, treat(x) benchmark(c) cluster(firm) seed(123) saving(draws)}{p_end}
+{phang2}{cmd:. use draws, clear}{p_end}
+
+{pstd}Because the data are simulated, the answer can be checked against the regression that includes {cmd:q}{p_end}
+{phang2}{cmd:. regress y x c q, vce(cluster firm)}{p_end}
+
+{pstd}Bootstrapping your own program{p_end}
+{phang2}{cmd:. program define my_sens, eclass}{p_end}
+{phang2}{cmd:      sensemakr y x c, treat(x) benchmark(c) kd(1) suppress}{p_end}
+{phang2}{cmd:  end}{p_end}
+{phang2}{cmd:. bootmakr, treat(x) program(my_sens) cluster(firm) seed(123)}{p_end}
 
 
 {marker references}{...}
@@ -420,7 +447,8 @@ sensemakr: Sensitivity analysis tools for OLS in R and Stata.
 {phang}
 Lonati, S. and J. N. Wulff. 2026.
 Why you should not use the ITCV with robust standard errors (and what to do instead).
-{it:SSRN Working Paper}.
+{it:Academy of Management Proceedings} 2026(1).
+{browse "https://doi.org/10.5465/AMPROC.2026.247bp"}
 {p_end}
 
 

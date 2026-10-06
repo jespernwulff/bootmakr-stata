@@ -1,4 +1,4 @@
-*! version 1.1.0  05oct2026  Jesper N. Wulff and Sirio Lonati
+*! version 1.2.0  06oct2026  Jesper N. Wulff and Sirio Lonati
 *! bootmakr: Bootstrap inference for sensemakr sensitivity analysis
 program define bootmakr, rclass
     version 14.0
@@ -360,14 +360,37 @@ program define bootmakr, rclass
     //     sensemakr's benchmarking routine (standard mode only; with several
     //     benchmark() variables, the first one -- the one the adjusted
     //     estimates refer to).
-    // Both are functions of the data alone and unaffected by the choice of
-    // variance estimator. No t-implied correlation or threshold is
-    // computed. The full-sample run draws no random numbers, so the
+    // (c) the impact of the omitted variable: the product of its partial
+    //     correlations with the outcome and with the treatment, both given
+    //     the covariates only, i.e. the scale on which the ITCV is stated.
+    //     sensemakr's r2yz_dx conditions on the treatment as well, so the
+    //     outcome correlation is recovered with the recursion formula for
+    //     partial correlations,
+    //        r_yz.x = r_yz.dx * sqrt((1 - r_yd.x^2) (1 - r_dz.x^2)) + r_yd.x * r_dz.x,
+    //     with r_yd.x the partial correlation of outcome and treatment given
+    //     the covariates (sensemakr's e(r2yd_x), signed by e(treat_coef)).
+    //     The bounds identify magnitudes only: r_dz.x is taken positive and
+    //     r_yz.dx gets the sign of r_yd.x, so that the omitted variable
+    //     biases the estimate away from zero (the case sensemakr's
+    //     adjustment removes); with the reduce option the sign is reversed.
+    // All of these are functions of the data alone and unaffected by the
+    // choice of variance estimator. No t-implied correlation or threshold
+    // is computed. The full-sample run draws no random numbers, so the
     // bootstrap replications below are unchanged.
     tempname bstr bnds
     local have_bstr = 0
     local have_obs  = 0
+    local r_yd_x = .
+    local impact1 = .
     quietly `smcmd'
+    capture local r_yd_x = sign(e(treat_coef)) * sqrt(e(r2yd_x))
+    if _rc != 0 local r_yd_x = .
+    if "`reduce'" != "" {
+        local sgn = -sign(`r_yd_x')
+    }
+    else {
+        local sgn = sign(`r_yd_x')
+    }
     capture confirm matrix e(bounds)
     if _rc == 0 {
         matrix `bnds' = e(bounds)
@@ -377,16 +400,23 @@ program define bootmakr, rclass
         local c_dz : list posof "r2dz_x" in bcols
         local c_yz : list posof "r2yz_dx" in bcols
         if `c_dz' > 0 & `c_yz' > 0 & rowsof(`bnds') >= `n_kd' {
-            matrix `bstr' = J(`n_kd', 6, .)
+            matrix `bstr' = J(`n_kd', 8, .)
             forvalues i = 1/`n_kd' {
                 if `c_kd' > 0 matrix `bstr'[`i', 1] = el(`bnds', `i', `c_kd')
                 if `c_ky' > 0 matrix `bstr'[`i', 2] = el(`bnds', `i', `c_ky')
-                matrix `bstr'[`i', 3] = el(`bnds', `i', `c_dz')
-                matrix `bstr'[`i', 4] = el(`bnds', `i', `c_yz')
-                matrix `bstr'[`i', 5] = sqrt(el(`bnds', `i', `c_dz'))
-                matrix `bstr'[`i', 6] = sqrt(el(`bnds', `i', `c_yz'))
+                local r2dz = el(`bnds', `i', `c_dz')
+                local r2yz = el(`bnds', `i', `c_yz')
+                matrix `bstr'[`i', 3] = `r2dz'
+                matrix `bstr'[`i', 4] = `r2yz'
+                matrix `bstr'[`i', 5] = sqrt(`r2dz')
+                matrix `bstr'[`i', 6] = sqrt(`r2yz')
+                local r_yz_x = `sgn' * sqrt(`r2yz') * sqrt((1 - `r_yd_x'^2) * (1 - `r2dz')) ///
+                    + `r_yd_x' * sqrt(`r2dz')
+                matrix `bstr'[`i', 7] = `r_yz_x'
+                matrix `bstr'[`i', 8] = `r_yz_x' * sqrt(`r2dz')
             }
-            matrix colnames `bstr' = kd ky r2dz_x r2yz_dx r_dz_x r_yz_dx
+            matrix colnames `bstr' = kd ky r2dz_x r2yz_dx r_dz_x r_yz_dx r_yz_x impact
+            local impact1 = el(`bstr', 1, 8)
             local have_bstr = 1
         }
     }
@@ -440,25 +470,34 @@ program define bootmakr, rclass
     preserve
     quietly use `bsfile', clear
 
+    // Replications in which every bound was computed (the count that R's
+    // bootmakr reports as N_successful)
+    local allok "1"
+    forvalues i = 1/`n_kd' {
+        local allok "`allok' & !missing(bound`i')"
+    }
+    quietly count if `allok'
+    local N_successful = r(N)
+
     // Store results for each kd value
     forvalues i = 1/`n_kd' {
         quietly {
             // Use correct variable name (bound1, bound2, etc.)
             keep if !missing(bound`i')
 
-            // Standard error
+            // Standard error, and this kd's own number of successful
+            // replications (a bound can be missing for one kd and not
+            // for another)
             summarize bound`i'
             local se_boot`i' = r(sd)
             local mean_boot`i' = r(mean)
-            if `i' == 1 {
-                local N_successful = r(N)
-            }
+            local N_ok`i' = r(N)
 
-            // P-value (two-sided)
+            // P-value (two-sided), with this kd's count as denominator
             count if bound`i' <= 0
-            local pL = r(N) / `N_successful'
+            local pL = r(N) / `N_ok`i''
             count if bound`i' >= 0
-            local pR = r(N) / `N_successful'
+            local pR = r(N) / `N_ok`i''
             local pvalue`i' = 2 * min(`pL', `pR')
         }
         restore, preserve
@@ -593,18 +632,20 @@ program define bootmakr, rclass
         }
         display as text "Implied strength of the omitted variable (sensemakr bounds):"
         display as text _col(6) "kd" _col(14) "ky" _col(22) "R2dz.x" _col(33) "R2yz.dx" ///
-            _col(44) "|r_dz.x|" _col(55) "|r_yz.dx|"
+            _col(45) "Impact"
         forvalues i = 1/`n_kd' {
             display as result _col(3) %5.2f el(`bstr', `i', 1) _col(11) %5.2f el(`bstr', `i', 2) ///
                 _col(22) %7.4f el(`bstr', `i', 3) _col(33) %7.4f el(`bstr', `i', 4) ///
-                _col(45) %6.3f el(`bstr', `i', 5) _col(56) %6.3f el(`bstr', `i', 6)
+                _col(45) %6.3f el(`bstr', `i', 8)
         }
         display as text "{hline 78}"
         display as text "Note: R2dz.x (R2yz.dx) = partial R2 of the omitted variable with the"
         display as text "      treatment given the covariates (with the outcome given treatment"
-        display as text "      and covariates). |r| = square root, i.e. the partial-correlation"
-        display as text "      scale of the ITCV. Descriptive only: no t-implied correlation or"
-        display as text "      threshold is reported."
+        display as text "      and covariates). Impact = product of its partial correlations with"
+        display as text "      the outcome and with the treatment, both given the covariates only:"
+        display as text "      the scale of the ITCV; signed so that the omitted variable biases"
+        display as text "      the estimate away from zero. Descriptive only: independent of the"
+        display as text "      variance estimator, and not a threshold."
     }
     else if !`program_mode' {
         display as text "Note: benchmark strength not available (sensemakr returned no e(bounds))"
@@ -878,14 +919,18 @@ program define bootmakr, rclass
     if `have_bstr' {
         return scalar r2dz_x  = el(`bstr', 1, 3)
         return scalar r2yz_dx = el(`bstr', 1, 4)
+        return scalar impact  = `impact1'
         return matrix benchmark_strength = `bstr'
+    }
+    if `r_yd_x' < . {
+        return scalar r_yd_x = `r_yd_x'
     }
 
     // Return matrix with all results if multiple kd
     if `n_kd' > 1 {
         tempname results
-        matrix `results' = J(`n_kd', 5, .)
-        matrix colnames `results' = estimate se ci_lower ci_upper pvalue
+        matrix `results' = J(`n_kd', 6, .)
+        matrix colnames `results' = estimate se ci_lower ci_upper pvalue N_ok
 
         local row_counter = 1
         foreach kd_val in `kd_list' {
@@ -894,6 +939,7 @@ program define bootmakr, rclass
             matrix `results'[`row_counter', 3] = `ci_lower`row_counter''
             matrix `results'[`row_counter', 4] = `ci_upper`row_counter''
             matrix `results'[`row_counter', 5] = `pvalue`row_counter''
+            matrix `results'[`row_counter', 6] = `N_ok`row_counter''
             local ++row_counter
         }
 
